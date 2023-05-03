@@ -1,13 +1,11 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import multer from 'multer';
 import mongoose from 'mongoose';
-import {validationResult} from 'express-validator';
-import {registerValidation} from "./validations/auth.js";
-import UserModel from "./models/User.js"
+import {loginValidation, postCreateValidation, registerValidation} from "./validations.js";
 import checkAuth from "./utils/checkAuth.js";
-import User from "./models/User.js";
-import {getMe, login, register} from "./controllers/UserController.js";
+import * as UserController from "./controllers/UserController.js";
+import * as PostController from './controllers/PostController.js'
+import handleValidationErrors from "./utils/handleValidationErrors.js";
 
 mongoose.connect('mongodb+srv://admin:wwwwww@cluster0.rdfzdip.mongodb.net/blog?retryWrites=true&w=majority')
     .then(()=> {console.log('DB Ok')})
@@ -15,11 +13,35 @@ mongoose.connect('mongodb+srv://admin:wwwwww@cluster0.rdfzdip.mongodb.net/blog?r
 
 const app = express();
 
-app.use(express.json());
+const storage = multer.diskStorage({ //создаем хранилище для картинок которые будут приходить будут сохранятся
+    destination: (_, __, cb) => { //в папку
+        cb(null, 'uploads')
+    },
+    filename: (_, file, cb) => { //объяснит как назвать этот файл
+        cb(null, file.originalname)
+    },
+})
+const upload = multer({storage})
 
-app.post('/auth/login', login)
-app.post('/auth/register', registerValidation, register)
-app.get('/auth/me', checkAuth, getMe)
+app.use(express.json());
+app.use('/uploads', express.static('uploads'))//проверяет есть ли папка функцией статик
+
+app.post('/auth/login', loginValidation, handleValidationErrors, UserController.login)
+app.post('/auth/register', registerValidation, handleValidationErrors, UserController.register)
+app.get('/auth/me', checkAuth, UserController.getMe);
+
+app.post('/upload', checkAuth, upload.single('image'), (req, res) => {
+    res.json({
+        url:`/upload/${req.file.originalname}`,
+    })
+})
+
+app.get('/posts', PostController.getAll)
+app.get('/posts/:id', PostController.getOne)
+app.post('/posts', checkAuth, postCreateValidation, handleValidationErrors, PostController.create)
+app.delete('/posts/:id', checkAuth, PostController.removePost)
+app.patch('/posts/:id', checkAuth, postCreateValidation, handleValidationErrors, PostController.updatePost)
+
 
 app.listen(4444, (err)=> {
     if(err) {

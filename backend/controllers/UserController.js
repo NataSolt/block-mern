@@ -1,85 +1,201 @@
-import {validationResult} from "express-validator";
-import bcrypt from "bcrypt";
-import UserModel from "../models/User.js";
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import  {validationResult} from "express-validator";
+import UserModel from '../models/User.js';
 
-export  const register = async (req,res)=> {
-    try{
-        const errors = validationResult(req);
-        if(!errors.isEmpty()) {
-            return res.status(400).json(errors.array())
-        }
-        const password = req.body.password;// берем наш пароль с сервера
-        const salt = await bcrypt.genSalt(10); //шифруем
-        const hash = await bcrypt.hash(password, salt) //передаем зашифрованный пароль
+export const register = async (req, res) => {
+    try {
+        const password = req.body.password;
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(password, salt);
 
         const doc = new UserModel({
             email: req.body.email,
             fullName: req.body.fullName,
-            passwordHash: hash,
             avatarUrl: req.body.avatarUrl,
-        })
-        const user = await doc.save()//сохраняем юзера в базе данных
+            passwordHash: hash,
+        });
 
-        const token = jwt .sign({  //создаем токен  шифруем id для дальнейшей работы с юзером
-                _id: user._id
-            }, 'secret', //секретное слово
-            { expiresIn: '30d'} ) //сколько дней валидным будет
+        const user = await doc.save();
 
-        const {passwordHash, ...userData} = user._doc //вытаскиваем hash и возвращаем все остальное
+        const token = jwt.sign(
+            {
+                _id: user._id,
+            },
+            'secret123',
+            {
+                expiresIn: '300d',
+            },
+        );
 
-        res.json({...userData, token})
-    }catch (err) {
-        console.log(err)
-        res.status(500).json({ message: 'Не удалось зарегистрироваться',
-        })
+        const { passwordHash, ...userData } = user._doc;
+
+        res.json({
+            ...userData,
+            token,
+        });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: 'Не удалось зарегистрироваться',
+        });
     }
-}
+};
 
 export const login = async (req, res) => {
     try {
-        const user = await UserModel.findOne({ email: req.body.email})//ищем пользователя в базе с таким емайлом
-        if(!user){  //если ее нет возвращаем сообщение
+        const user = await UserModel.findOne({ email: req.body.email });
+
+        if (!user) {
             return res.status(404).json({
-                message: 'Пользователь не найден'
-            })
+                message: 'Пользователь не найден',
+            });
         }
-        const isValidPass = await bcrypt.compare(req.body.password, user._doc.passwordHash)// проверяем совпадают ли пароли
-        if(!isValidPass) {  //если они не равны вернем сообщение
+
+        const isValidPass = await bcrypt.compare(req.body.password, user._doc.passwordHash);
+
+        if (!isValidPass) {
             return res.status(400).json({
-                message: 'Неверный логин или пароль'
-            })
+                message: 'Неверный логин или пароль',
+            });
         }
-        const token = jwt .sign({  //создаем токен  шифруем id для дальнейшей работы с юзером
-                _id: user._id
-            }, 'secret', //секретное слово
-            { expiresIn: '30d'} ) //сколько дней валидным будет
 
-        const {passwordHash, ...userData} = user._doc //вытаскиваем hash и возвращаем все остальное
+        const token = jwt.sign(
+            {
+                _id: user._id,
+            },
+            'secret123',
+            {
+                expiresIn: '300d',
+            },
+        );
 
-        res.json({...userData, token})
+        const { passwordHash, ...userData } = user._doc;
 
-    }catch (err) {
-        console.log(err)
-        res.status(500).json({ message: 'Не удалось авторизироваться',
-        })
+        res.json({
+            ...userData,
+            token,
+        });
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: 'Не удалось авторизоваться',
+        });
     }
+};
 
-}
-
-export const getMe = async (req, res)=> {
+export const getMe = async (req, res) => {
     try {
-        const user = await UserModel.findById(req.userId)// из реквеста вытягиваем id
-        if(!user) {
+        const user = await UserModel.findById(req.userId);
+
+        if (!user) {
             return res.status(404).json({
-                message: 'Пользователь не найден'
-            })
+                message: 'Пользователь не найден',
+            });
         }
-        const {passwordHash, ...userData} = user._doc //вытаскиваем hash и возвращаем все остальное
-        res.json(userData)
-    } catch(err){
-        console.log(err)
-        res.status(500).json({ message: 'Нет доступа',
-        })
+
+        const { passwordHash, ...userData } = user._doc;
+
+       res.json(userData);
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: 'Нет доступа',
+        });
     }
-}
+};
+
+
+
+// import {validationResult} from "express-validator";
+// import bcrypt from "bcrypt";
+// import UserModel from "../models/User.js";
+// import jwt from "jsonwebtoken";
+//
+// export  const register = async (req,res)=> {
+//     try{
+//         const errors = validationResult(req);
+//         if(!errors.isEmpty()) {
+//             return res.status(400).json(errors.array())
+//         }
+//         const password = req.body.password;// берем наш пароль с сервера
+//         const salt = await bcrypt.genSalt(10); //шифруем
+//         const hash = await bcrypt.hash(password, salt) //передаем зашифрованный пароль
+//
+//         const doc = new UserModel({
+//             email: req.body.email,
+//             fullName: req.body.fullName,
+//             passwordHash: hash,
+//             avatarUrl: req.body.avatarUrl,
+//         })
+//         const user = await doc.save()//сохраняем юзера в базе данных
+//
+//         const token = jwt.sign({  //создаем токен  шифруем id для дальнейшей работы с юзером
+//                 _id: user._id
+//             }, 'secret', //секретное слово
+//             { expiresIn: '30d'} ) //сколько дней валидным будет
+//
+//         const {passwordHash, ...userData} = user._doc //вытаскиваем hash и возвращаем все остальное
+//
+//         res.json({...userData, token})
+//     }catch (err) {
+//         console.log(err)
+//         res.status(500).json({ message: 'Не удалось зарегистрироваться',
+//         })
+//     }
+// }
+//
+// export const login = async (req, res) => {
+//     try {
+//         const user = await UserModel.findOne({ email: req.body.email})//ищем пользователя в базе с таким емайлом
+//         if(!user){  //если ее нет возвращаем сообщение
+//             return res.status(404).json({
+//                 message: 'Пользователь не найден'
+//             })
+//         }
+//         const isValidPass = await bcrypt.compare(req.body.password, user._doc.passwordHash)// проверяем совпадают ли пароли
+//         if(!isValidPass) {  //если они не равны вернем сообщение
+//             return res.status(400).json({
+//                 message: 'Неверный логин или пароль'
+//             })
+//         }
+//         const token = jwt.sign({  //создаем токен  шифруем id для дальнейшей работы с юзером
+//
+//                 _id: user._id
+//             }, 'secret', //секретное слово
+//             { expiresIn: '30d'} ) //сколько дней валидным будет
+//
+//         const {passwordHash, ...userData} = user._doc //вытаскиваем hash и возвращаем все остальное
+// console.log(user._id)
+//         res.json({...userData, token})
+//
+//     }catch (err) {
+//         console.log(err)
+//         res.status(500).json({ message: 'Не удалось авторизироваться',
+//         })
+//     }
+//
+// }
+//
+// export const getMe = async (req, res) => {
+//     try {
+//         const user = await UserModel.findById(req.userId);
+//
+//         if (!user) {
+//             return res.status(404).json({
+//                 message: 'Пользователь не найден',
+//             });
+//         }
+//
+//         const { passwordHash, ...userData } = user._doc;
+//
+//         res.json(userData);
+//     } catch (err) {
+//         console.log(err);
+//         res.status(500).json({
+//             message: 'Нет доступа',
+//         });
+//     }
+// };
